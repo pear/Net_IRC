@@ -87,7 +87,6 @@ class Net_IRC
             return false;
         }
         $this->log(3, "connected");
-        $this->initStats();
         $this->socket = $sd;
         $this->command('USER '.
                        $options['identd'] . ' '.
@@ -95,9 +94,11 @@ class Net_IRC
                        $options['server'] . ' '.
                        ':' . $options['realname']);
         $this->command('NICK ' . $options['nick']);
-        $this->loopRead('MOTD', false);
-        $this->callback('CONNECT', false);
+        $this->initStats();
+        while($this->readEvent(true) == 'MOTD');
+
         socket_set_blocking($sd, false);
+        $this->callback('CONNECT', false);
         $this->options = $options;
         return true;
     }
@@ -108,9 +109,14 @@ class Net_IRC
     function disconnect()
     {
         $this->command('QUIT');
-        // XXX This seems not to work, analyze it
-        fclose($this->socket);
-        $this->socket = null;
+        // XXX This seems not to work, analyze why
+        //fclose($this->socket);
+        //$this->socket = null;
+    }
+
+    function isConnected()
+    {
+        return !feof($this->socket);
     }
 
     /**
@@ -127,7 +133,8 @@ class Net_IRC
                 376 => 'MOTD',
                 422 => 'MOTD',
                 366 => 'NAMES',
-                318 => 'WHOIS'
+                318 => 'WHOIS',
+                433 => 'ERR_NICKNAMEINUSE'
             );
         }
         if ($code) {
@@ -145,10 +152,12 @@ class Net_IRC
     * Send a IRC command to the server
     *
     * @param string $command The full command for sending
+    * @return bool True or false depending on the write() response
+    * @see Net_IRC::write()
     */
     function command($command)
     {
-        $this->write(trim($command));
+        return $this->write(trim($command));
     }
 
     /**
@@ -179,8 +188,7 @@ class Net_IRC
     *
     * @param bool $once Wait until there is info to read
     */
-    // XXX rename $once -> $block
-    function read($once = false)
+    function read($block = false)
     {
         if (feof($this->socket)) {
             $this->log(0, 'Read Disconnected');
@@ -191,46 +199,61 @@ class Net_IRC
             $receive = rtrim(fgets($this->socket, 1024));
             // XXX Only update stats for example each 2 seconds
             $this->updateStats();
-            if (!$receive && $once) {
-                break;
-            }
-            if (!$receive && !$once) {
-                usleep(500000); // Half second is enough interactive
-                continue;
-            }
-            if ($receive) {
+            if (!$receive) {
+                if (!$block) {
+                    return null;
+                } else {
+                    usleep(500000); // Half second is enough interactive
+                    continue;
+                }
+            } else {
                 $this->log(4, "-> $receive");
-                // XXX Return direclty the parsed response
-                $result = $this->parseResponse($receive);
-                $this->updateStats($result[0], $result[1]);
-                if ($result[0] == 'PING') {
-                    $this->callback('ping', $result[1]);
-                    $receive = false;
-                }
-                if ($result[0] == 'ERROR') {
-                    $this->callback('error', $result[1]);
-                }
             }
         } while (!$receive);
         return $receive;
     }
 
-    // XXX Clean-up the params & rename $once -> $block
-    function loopRead($only_this_event = null, $continue = true, $once = false)
+    /**
+    * Reads from the socket and call the event handler. It will automatically
+    * return server PINGs
+    *
+    * @param bool $block When TRUE it will read until there is data
+    * @return mixed  - FALSE on socket read errors
+    *                - NULL on no data in the socket (only when $block=false)
+    *                - STRING the event called
+    */
+    function readEvent($block = false)
     {
-        while ($response = $this->read($once)) {
+        while ($response = $this->read($block)) {
             $result = $this->parseResponse($response);
-            $event = $result[0];
+            $event  = $result[0];
             if (is_numeric($event)) {
                 $event = $this->getEvent($event);
             }
-            if (!$only_this_event || ($only_this_event == $event)) {
-                $this->callback($event, $result[1]);
-                if (!$continue) {
-                    break;
-                }
+            $this->updateEventStats($event, $result[1]);
+            $this->callback($event, $result[1]);
+            // Automatically answer server PINGs
+            if ($event == 'PING') {
+                continue;
+            } else {
+                break;
             }
         }
+        // read() can return the response or null on no response. False means
+        // error on socket read
+        switch ($response) {
+            case null:  return true;
+            case false: return false;
+            default:    return $event;
+        }
+    }
+
+    /**
+    * Loop forever reading server commands and calling the properly event handlers
+    */
+    function loopRead()
+    {
+        while($this->readEvent(true));
     }
 
     /**
@@ -460,6 +483,11 @@ class Net_IRC_Event extends Net_IRC
     {
         $this->log(0, "Error ocurred ($origin, $orighost, $target, $params)");
         // XXX add error handling
+    }
+
+    function event_err_nicknameinuse($origin, $orighost, $target, $params)
+    {
+        die("Could not connect: Nick already in use");
     }
 
     function event_ping($origin, $orighost, $target, $params)
