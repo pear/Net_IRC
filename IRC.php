@@ -470,6 +470,21 @@ class Net_IRC
         return $this->extra;
     }
 
+    /**
+    * Checks if a nick is valid or not (RFC 2812 section 2.3.1)
+    *
+    * @param string $nick The nick to check
+    * @return bool The result of the validation
+    */
+    function checkNick($nick)
+    {
+        $special = preg_quote("[]\'_^{|}");
+        if (preg_match("/^[a-zA-Z$special][a-zA-Z0-9$special]{0,8}\$/", $nick)) {
+            return true;
+        }
+        return false;
+    }
+
 }
 
 /**
