@@ -1,0 +1,150 @@
+           ********************************************
+           PEAR Net_IRC, a PHP IRC client class
+                Author: Tomas V.V.Cox <cox@idecnet.com>
+              Revision: $Rev$
+           Class state: alpha
+             Doc state: alpha
+           ********************************************
+
+Features
+===========
+- Non-blocking sockets
+- Server messages handled by a callback system
+- Full logging capabilities
+- Full statistic collector
+
+Usage
+=====
+
+o Getting and installing Net_IRC
+--------------------------------
+
+Install:
+$ pear install Net_IRC
+Including:
+require_once 'Net/IRC.php';
+
+o Creating your own event handler class
+---------------------------------------
+
+Here is an example of a basic bot that will send a message to the
+channel when someone changes the topic:
+
+class MyBot extends Net_IRC_Event {
+    function event_topic($nick, $nickhost, $channel, $topic) {
+        $this->command("PRIVMSG $channel :$nick has changed the topic");
+    }
+}
+
+When a call to the method $irc->readEvent() (commented later) receives
+a message like ":cox!user@host TOPIC #pear :New topic" it is
+parsed in 5 pieces:
+
+$command   "topic"
+
+$origin:   "cox"
+$orighost: "user@host"
+$target:   "#pear"
+$params:   "New Topic"
+
+And a call to the method "$irc->event_$command()" with the four params
+($origin, $orighost, $target, $params) is made (if it is defined in
+the class). This is the same for every server message. Note that some of
+the params may be null if they are not necesary.
+
+o Creating the object and connecting
+------------------------------------
+
+$irc = new MyBot;
+$options = array(
+    'server'    => 'localhost'       // The server to connect to
+    'port'      => 6667,             // The port of the IRC server
+    'nick'      => 'Net_IRC',        // The nick for the client
+    'realname'  => 'Net_IRC Bot',    // The real name for the client
+    'identd'    => 'myident',        // The identd for the client
+    'host'      => '10.10.11.2',     // The host of the client
+    'log_types' => array(0, 1, 2, 3) // The type of logs
+)
+$irc->connect($options); // True or False
+
+
+o Reading
+---------
+
+$irc->read($block). Reads one single message from the IRC server. As
+the socket is in non blocking mode, the read() action may return no
+data if there is none. The $block param will emulate blocking mode by
+waiting until there is data to return
+
+$irc->readEvent($block). Reads a message from the server, parses the
+response and executes the properly callback handler.
+
+$irc->loopRead(). Do forever a $irc->readEvent(true); action
+
+o Writting
+----------
+
+$irc->command($cmd). Sends the $cmd command string to the server
+
+o Statistics
+------------
+
+$irc->getStats($label=null). Valid values for $label are:
+
+rx_idle:       The seconds passed since the last time we received a 
+               message from the server
+rx_idle_since: The last date (timestamp) we received a message from the server
+tx_idle        The seconds since the last time we sent a message
+tx_idle_since: The last time we sent a message to the server
+started:       The date (timestamp) when the socket was openned
+running:       The amount of seconds since the start time
+
+o Logging
+---------
+
+Just by extending your class from Net_IRC_Event, you are able to use
+a basic logging mechanism which prints to stdout the type of messages
+configured with the "log_types" directive from the $options array.
+
+If you need at some point to enable/disable the logging of other
+types, you could use the $irc->setLogTypes($types) method.
+
+o Handling external info
+------------------------
+$irc->setExtra($extra)
+$irc->getExtra($label = null)
+
+(doc in progress)
+
+
+Complete example
+================
+
+<?php
+require_once 'Net/IRC.php';
+class MyBot extends Net_IRC_Event {
+    function event_topic($nick, $nickhost, $channel, $topic) {
+        $this->command("PRIVMSG $channel :$nick has changed the topic");
+    }
+}
+$irc = new MyBot;
+$options = array(
+    'server'    => 'localhost'
+    'port'      => 6667,
+    'nick'      => 'Net_IRC',
+    'realname'  => 'Net_IRC Bot',
+    'identd'    => 'myident',
+    'host'      => '10.10.11.2',
+    'log_types' => array(0, 1, 2, 3)
+)
+if (!$irc->connect($options)) {
+    die('Could not connect to server');
+}
+$irc->command("JOIN #pear");
+$irc->loopRead();
+?>
+
+Author
+======
+
+Tomas V.V.Cox <cox@idecnet.com>
