@@ -88,13 +88,13 @@ class Net_IRC
         }
         $this->log(3, "connected");
         $this->socket = $sd;
+        $this->initStats();
         $this->command('USER '.
                        $options['identd'] . ' '.
                        $options['host']   . ' '.
                        $options['server'] . ' '.
                        ':' . $options['realname']);
         $this->command('NICK ' . $options['nick']);
-        $this->initStats();
         while($this->readEvent(true) == 'MOTD');
 
         socket_set_blocking($sd, false);
@@ -179,6 +179,7 @@ class Net_IRC
             return false;
         } else {
             $this->log(4, "<- $command");
+            $this->updateStats('tx');
         }
         return true;
     }
@@ -199,8 +200,6 @@ class Net_IRC
         do {
             $receive = rtrim(fgets($this->socket, 1024));
             if (!$receive) {
-                // XXX Only update stats for example each 2 seconds
-                $this->updateStats(false);
                 if (!$block) {
                     return null;
                 } else {
@@ -208,7 +207,7 @@ class Net_IRC
                     continue;
                 }
             } else {
-                $this->updateStats(true);
+                $this->updateStats('rx');
                 $this->log(4, "-> $receive");
             }
         } while (!$receive);
@@ -338,19 +337,13 @@ class Net_IRC
     /**
     * Updates the internal stats
     *
+    * @param string type 'rx' or 'tx'
     * @access private
     */
     // XXX rename to _updateStats()
-    // XXX Introduce stats levels (none, normal, full)
-    function updateStats($data)
+    function updateStats($type = 'rx')
     {
-        if ($data) {
-            $this->stats['rx_idle'] = 0;
-        } else {
-            $this->stats['rx_idle'] += time() - $this->stats['last_updated'];
-            $this->log(6, "Updating idle time to: " . $this->stats['rx_idle']);
-        }
-        $this->stats['last_updated'] = time();
+        $this->stats[$type . '_idle_since'] = time();
     }
 
     /**
@@ -360,6 +353,7 @@ class Net_IRC
     */
     // XXX This should be enhanced to be able to track the different
     //     kinds of flood attacks (maybe in a different class)
+    // XXX Introduce stats levels (none, normal, full)
     function updateEventStats($event, $args = array())
     {
         $this->log(5, "Updating event $event");
@@ -402,17 +396,21 @@ class Net_IRC
     // XXX Rename to _initStats()
     function initStats()
     {
-        $this->stats['rx_idle'] = 0;
-        $this->stats['last_updated'] = time();
-        $this->stats['events']  = array();
         $this->stats['started'] = time();
+        $this->stats['rx_idle'] = 0;
+        $this->stats['rx_idle_since'] = time();
+        $this->stats['tx_idle'] = 0;
+        $this->stats['tx_idle_since'] = time();
+        $this->stats['events']  = array();
     }
 
     /**
     * Get the internal stats of the connection. Params accepted for $label:
     * - rx_idle:      The seconds passed since the last time we received a
     *                 message from the server
-    * - last_updated: The last date (timestamp) when the stats where updated
+    * - rx_idle_since: The last date (timestamp) we received a message from the server
+    * - tx_idle       The seconds since the last time we sent a message
+    * - tx_idle_since: The last time we sent a message to the server
     * - started:      The date (timestamp) when the socket was openned
     * - running:      The amount of seconds since the start time
     *
@@ -422,6 +420,8 @@ class Net_IRC
     */
     function getStats($label = null)
     {
+        $this->stats['rx_idle'] = time() - $this->stats['rx_idle_since'];
+        $this->stats['tx_idle'] = time() - $this->stats['tx_idle_since'];
         $this->stats['running'] = time() - $this->stats['started'];
         if ($label) {
             return isset($this->stats[$label]) ? $this->stats[$label] : false;
@@ -442,7 +442,7 @@ class Net_IRC
     }
 
     /**
-    * Gets a option of this instance
+    * Gets an option of this instance
     *
     * @param  string $options The option to retrieve
     * @return string The value of the option
