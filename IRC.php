@@ -20,7 +20,7 @@
 // $Id$
 
 /**
-* Class for handling the client side of the IRC protocol (RFC 1459)
+* Class for handling the client side of the IRC protocol (RFC 2812)
 *
 * @author Tomas V.V.Cox <cox@idecnet.com>
 */
@@ -31,10 +31,13 @@ class Net_IRC
     * Associative array containing the options for this IRC instance
     *   'server'    => 'localhost'       // The server to connect to
     *   'port'      => 6667,             // The port of the IRC server
+    *   'pass'      => 'passwd',         // The conection password
     *   'nick'      => 'Net_IRC',        // The nick for the client
     *   'realname'  => 'Net_IRC Bot',    // The real name for the client
     *   'identd'    => 'myident',        // The identd for the client
     *   'host'      => '10.10.11.2',     // The host of the client
+    *   'oper_name' => 'username',       // The operator user name (optional)
+    *   'oper_pass' => 'mypass',         // The operator password (optional)
     *   'log_types' => array(0, 1, 2, 3) // The type of logs
     *
     * @var array $options
@@ -89,14 +92,19 @@ class Net_IRC
         $this->log(3, "connected");
         $this->socket = $sd;
         $this->initStats();
+        if (isset($options['pass'])) {
+            $this->command('PASS ' . $options['pass']);
+        }
+        $this->command('NICK ' . $options['nick']);
         $this->command('USER '.
                        $options['identd'] . ' '.
                        $options['host']   . ' '.
                        $options['server'] . ' '.
                        ':' . $options['realname']);
-        $this->command('NICK ' . $options['nick']);
-        while($this->readEvent(true) == 'MOTD');
-
+        while($this->readEvent(true) != 'MOTD');
+        if (isset($options['oper_name']) && isset($options['oper_pass'])) {
+            $this->command("OPER {$options['oper_name']} {$options['oper_pass']}");
+        }
         socket_set_blocking($sd, false);
         $this->callback('CONNECT', false);
         $this->options = $options;
@@ -242,6 +250,7 @@ class Net_IRC
         }
         // read() can return the response or null on no response. False means
         // error on socket read
+        $this->log(5, "readEvent() == $event");
         switch ($response) {
             case null:  return true;
             case false: return false;
@@ -303,12 +312,17 @@ class Net_IRC
                 $target = $rest;
                 $params = null;
             }
+        // Server messages (PING, NOTICE, ERROR)
         } else {
             $origin   = null;
             $orighost = null;
             $command  = $message[0];
-            $target   = null;
-            $params   = substr($message[1], 1);
+            if (strpos($message[1], ' :') !== false) {
+                list($target, $params) = explode(' :', $message[1], 2);
+            } else {
+                $target = null;
+                $params = substr($message[1], 1);
+            }
         }
         return array($command, array($origin, $orighost, $target, $params));
     }
