@@ -187,6 +187,7 @@ class Net_IRC
     * Reads from the socket
     *
     * @param bool $once Wait until there is info to read
+    * @return mixed False on socket error, null on no data, string the data
     */
     function read($block = false)
     {
@@ -197,9 +198,9 @@ class Net_IRC
         }
         do {
             $receive = rtrim(fgets($this->socket, 1024));
-            // XXX Only update stats for example each 2 seconds
-            $this->updateStats();
             if (!$receive) {
+                // XXX Only update stats for example each 2 seconds
+                $this->updateStats(false);
                 if (!$block) {
                     return null;
                 } else {
@@ -207,6 +208,7 @@ class Net_IRC
                     continue;
                 }
             } else {
+                $this->updateStats(true);
                 $this->log(4, "-> $receive");
             }
         } while (!$receive);
@@ -340,21 +342,10 @@ class Net_IRC
     */
     // XXX rename to _updateStats()
     // XXX Introduce stats levels (none, normal, full)
-    function updateStats($event = null, $args = array())
+    function updateStats($data)
     {
-        if ($event) {
+        if ($data) {
             $this->stats['rx_idle'] = 0;
-
-            if (isset($this->stats['events'][$event])) {
-                $item = &$this->stats['events'][$event];
-                $this->log(5, "Updating event $event");
-                $this->updateEventStats($item, $args);
-            } else {
-                $this->stats['events'][$event] = array();
-                $this->stats['events'][$event]['times']    = 1;
-                $this->stats['events'][$event]['interval'] = 1;
-                $this->stats['events'][$event]['last'] = time();
-            }
         } else {
             $this->stats['rx_idle'] += time() - $this->stats['last_updated'];
             $this->log(6, "Updating idle time to: " . $this->stats['rx_idle']);
@@ -369,8 +360,17 @@ class Net_IRC
     */
     // XXX This should be enhanced to be able to track the different
     //     kinds of flood attacks (maybe in a different class)
-    function updateEventStats(&$event, $args = array())
+    function updateEventStats($event, $args = array())
     {
+        $this->log(5, "Updating event $event");
+        if (!isset($this->stats['events'][$event])) {
+            $this->stats['events'][$event] = array();
+            $this->stats['events'][$event]['times']    = 1;
+            $this->stats['events'][$event]['interval'] = 1;
+            $this->stats['events'][$event]['last'] = time();
+            return;
+        }
+        $event = &$this->stats['events'][$event];
         $event['times'] += 1;
         // XXX make a configurable param
         $int = 60;
