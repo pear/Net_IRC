@@ -431,10 +431,9 @@ class Net_IRC
 
     /**
     * Sets which type of messages will be logged
+    *
     * @param mixed $codes int one code or array multiple codes
-    * @access private
     */
-    // XXX Rename to _logTypes()
     function logTypes($codes = array())
     {
         settype($codes, 'array');
