@@ -20,8 +20,8 @@ $irc->connect($options);
 $irc->command("JOIN #pear");
 $i = 0;
 while (true) {
-    $irc->read(true);
-    if ($i++ > 6) {
+    $irc->readEvent();
+    if ($i++ > 12) {
         print_r($irc->getStats());
         $i = 0;
     }
