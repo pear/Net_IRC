@@ -101,9 +101,9 @@ $net1->command("JOIN $channel");
 $net2->command("JOIN $channel");
 
 while(true) {
-    $net1->loopRead(null, null, true);
+    $net1->readEvent();
     usleep(250000);
-    $net2->loopRead(null, null, true);
+    $net2->readEvent();
     usleep(250000);
 }
 ?>
