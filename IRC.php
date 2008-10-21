@@ -1,81 +1,89 @@
 <?php
-// /* vim: set expandtab tabstop=4 shiftwidth=4: */
-// +----------------------------------------------------------------------+
-// | PHP Version 4                                                        |
-// +----------------------------------------------------------------------+
-// | Copyright (c) 2002-2003 The PHP Group                                     |
-// +----------------------------------------------------------------------+
-// | This source file is subject to version 2.02 of the PHP license,      |
-// | that is bundled with this package in the file LICENSE, and is        |
-// | available at through the world-wide-web at                           |
-// | http://www.php.net/license/2_02.txt.                                 |
-// | If you did not receive a copy of the PHP license and are unable to   |
-// | obtain it through the world-wide-web, please send a note to          |
-// | license@php.net so we can mail you a copy immediately.               |
-// +----------------------------------------------------------------------+
-// | Author: Tomas V.V.Cox <cox@idecnet.com>                              |
-// |                                                                      |
-// +----------------------------------------------------------------------+
-//
-// $Id$
+/**
+ * Net_IRC
+ *
+ * PHP Version 4
+ *
+ * Copyright (c) 2002-2003 The PHP Group
+ *
+ * This source file is subject to version 2.02 of the PHP license,
+ * that is bundled with this package in the file LICENSE, and is
+ * available at through the world-wide-web at
+ * http://www.php.net/license/2_02.txt.
+ * If you did not receive a copy of the PHP license and are unable to
+ * obtain it through the world-wide-web, please send a note to
+ * license@php.net so we can mail you a copy immediately.
+ *
+ * @category Net
+ * @package  Net_IRC
+ * @author   Tomas V.V.Cox <cox@idecnet.com>
+ * @license  http://www.php.net/license/2_02.txt PHP 2.02
+ * @version  CVS: $Id$
+ * @link     http://pear.php.net/package/Net_IRC
+ */
 
 /**
-* Class for handling the client side of the IRC protocol (RFC 2812)
-*
-* @author Tomas V.V.Cox <cox@idecnet.com>
-*/
+ * Class for handling the client side of the IRC protocol (RFC 2812)
+ *
+ * @category Net
+ * @package  Net_IRC
+ * @author   Tomas V.V.Cox <cox@idecnet.com>
+ * @license  http://www.php.net/license/2_02.txt PHP 2.02
+ * @link     http://pear.php.net/package/Net_IRC
+ */
 class Net_IRC
 {
 
     /**
-    * Associative array containing the options for this IRC instance
-    *   'server'    => 'localhost'       // The server to connect to
-    *   'port'      => 6667,             // The port of the IRC server
-    *   'pass'      => 'passwd',         // The conection password
-    *   'nick'      => 'Net_IRC',        // The nick for the client
-    *   'realname'  => 'Net_IRC Bot',    // The real name for the client
-    *   'identd'    => 'myident',        // The identd for the client
-    *   'host'      => '10.10.11.2',     // The host of the client
-    *   'oper_name' => 'username',       // The operator user name (optional)
-    *   'oper_pass' => 'mypass',         // The operator password (optional)
-    *   'log_types' => array(0, 1, 2, 3) // The type of logs
-    *
-    * @var array $options
-    * @see Net_IRC::log_types
-    */
-    var $options   = array();
+     * Associative array containing the options for this IRC instance
+     *   'server'    => 'localhost'       // The server to connect to
+     *   'port'      => 6667,             // The port of the IRC server
+     *   'pass'      => 'passwd',         // The conection password
+     *   'nick'      => 'Net_IRC',        // The nick for the client
+     *   'realname'  => 'Net_IRC Bot',    // The real name for the client
+     *   'identd'    => 'myident',        // The identd for the client
+     *   'host'      => '10.10.11.2',     // The host of the client
+     *   'oper_name' => 'username',       // The operator user name (optional)
+     *   'oper_pass' => 'mypass',         // The operator password (optional)
+     *   'log_types' => array(0, 1, 2, 3) // The type of logs
+     *
+     * @var array $options
+     * @see Net_IRC::log_types
+     */
+    var $options = array();
 
     /**
-    * logging error types
-    * 0 fatal
-    * 1 warning
-    * 2 notice
-    * 3 informative
-    * 4 debug
-    * 5 debug++
-    * @var array $log_types
-    * @see Net_IRC::logTypes()
-    */
+     * logging error types
+     * 0 fatal
+     * 1 warning
+     * 2 notice
+     * 3 informative
+     * 4 debug
+     * 5 debug++
+     * @var array $log_types
+     * @see Net_IRC::logTypes()
+     */
     var $log_types = array(0, 1, 2, 3, 4);
 
-    var $buffer    = array();
+    var $buffer = array();
 
     /**
-    * Array with statistics about the connection
-    *
-    * @var array $stats
-    */
-    var $stats     = array();
+     * Array with statistics about the connection
+     *
+     * @var array $stats
+     */
+    var $stats = array();
 
     /**
-    * Connects to a IRC server. This method will opens the socket to the server,
-    * issue a USER and NICK command, wait for the MOTD message and call the
-    * even_connect() method if exists
-    *
-    * @param array $options The parameters of the connection
-    * @see Net_IRC::options
-    * @return true or false
-    */
+     * Connects to a IRC server. This method will opens the socket to the server,
+     * issue a USER and NICK command, wait for the MOTD message and call the
+     * even_connect() method if exists
+     *
+     * @param array $options The parameters of the connection
+     *
+     * @see Net_IRC::options
+     * @return true or false
+     */
     function connect($options)
     {
         // XXX Check options
@@ -101,19 +109,26 @@ class Net_IRC
                        $options['host']   . ' '.
                        $options['server'] . ' '.
                        ':' . $options['realname']);
-        while($this->readEvent(true) != 'MOTD');
+
+        while ($this->readEvent(true) != 'MOTD') {
+        }
+
         if (isset($options['oper_name']) && isset($options['oper_pass'])) {
             $this->command("OPER {$options['oper_name']} {$options['oper_pass']}");
         }
+
         socket_set_blocking($sd, false);
         $this->callback('CONNECT', false);
         $this->options = $options;
+
         return true;
     }
 
     /**
-    * Disconnects from a IRC by sending the QUIT command
-    */
+     * Disconnects from a IRC by sending the QUIT command
+     *
+     * @return void
+     */
     function disconnect()
     {
         $this->command('QUIT');
@@ -122,20 +137,28 @@ class Net_IRC
         //$this->socket = null;
     }
 
+    /**
+     * Are we connected?
+     *
+     * @return bool
+     */
     function isConnected()
     {
         return !feof($this->socket);
     }
 
     /**
-    * Transform code messages returned by the server to text events
-    *
-    * @param int    $code  Search the value for a code
-    * @param string $value Search the code for a value
-    */
+     * Transform code messages returned by the server to text events
+     *
+     * @param int    $code    Search the value for a code
+     * @param string $handler Handler to use
+     *
+     * @return bool
+     */
     function getEvent($code = null, $handler = null)
     {
         static $events;
+
         if (empty($events)) {
             $events = array(
                 376 => 'MOTD',
@@ -145,35 +168,40 @@ class Net_IRC
                 433 => 'ERR_NICKNAMEINUSE'
             );
         }
+
         if ($code) {
             return isset($events[$code]) ? $events[$code] : $code;
         }
+
         foreach ($events as $k => $e) {
             if ($handler == $e) {
                 return $events[$k];
             }
         }
+
         return false;
     }
 
     /**
-    * Send a IRC command to the server
-    *
-    * @param string $command The full command for sending
-    * @return bool True or false depending on the write() response
-    * @see Net_IRC::write()
-    */
+     * Send a IRC command to the server
+     *
+     * @param string $command The full command for sending
+     *
+     * @see Net_IRC::write()
+     * @return bool True or false depending on the write() response
+     */
     function command($command)
     {
         return $this->write(trim($command));
     }
 
     /**
-    * Writes a command to the openned socket
-    *
-    * @param string $command The full command for sending
-    * @return bool True on success or False if the socket is not open
-    */
+     * Writes a command to the openned socket
+     *
+     * @param string $command The full command for sending
+     *
+     * @return bool True on success or False if the socket is not open
+     */
     function write($command)
     {
         if (feof($this->socket)) {
@@ -193,11 +221,12 @@ class Net_IRC
     }
 
     /**
-    * Reads from the socket
-    *
-    * @param bool $once Wait until there is info to read
-    * @return mixed False on socket error, null on no data, string the data
-    */
+     * Reads from the socket
+     *
+     * @param bool $block Wait until there is info to read
+     *
+     * @return mixed False on socket error, null on no data, string the data
+     */
     function read($block = false)
     {
         if (feof($this->socket)) {
@@ -223,14 +252,15 @@ class Net_IRC
     }
 
     /**
-    * Reads from the socket and call the event handler. It will automatically
-    * return server PINGs
-    *
-    * @param bool $block When TRUE it will read until there is data
-    * @return mixed  - FALSE on socket read errors
-    *                - NULL on no data in the socket (only when $block=false)
-    *                - STRING the event called
-    */
+     * Reads from the socket and call the event handler. It will automatically
+     * return server PINGs
+     *
+     * @param bool $block When TRUE it will read until there is data
+     *
+     * @return mixed  - FALSE on socket read errors
+     *                - NULL on no data in the socket (only when $block=false)
+     *                - STRING the event called
+     */
     function readEvent($block = false)
     {
         while ($response = $this->read($block)) {
@@ -252,37 +282,41 @@ class Net_IRC
         // error on socket read
         $this->log(5, "readEvent() == $event");
         switch ($response) {
-            case null:  return true;
-            case false: return false;
-            default:    return $event;
+        case null:  return true;
+        case false: return false;
+        default:    return $event;
         }
     }
 
     /**
-    * Loop forever reading server commands and calling the properly event handlers
-    */
+     * Loop forever reading server commands and calling the properly event handlers
+     *
+     * @return void
+     */
     function loopRead()
     {
-        while($this->readEvent(true));
+        while ($this->readEvent(true)) {
+        }
     }
 
     /**
-    * Parse a message comming from the IRC server. It will always return
-    * this data structure:
-    *
-    * array($command, array($origin, $orighost, $target, $params))
-    *
-    *   $command  -> The command
-    *   $origin   -> The nick which sents the command
-    *   $orighost -> The full identd of the host which sent the command
-    *   $target   -> The destination of the message
-    *   $params   -> The rest of the IRC message
-    *
-    * The value of some of this params may be null depending on the response
-    *
-    * @param string $response The message returned sent from the server
-    * @return array The parsed response
-    */
+     * Parse a message comming from the IRC server. It will always return
+     * this data structure:
+     *
+     * array($command, array($origin, $orighost, $target, $params))
+     *
+     *   $command  -> The command
+     *   $origin   -> The nick which sents the command
+     *   $orighost -> The full identd of the host which sent the command
+     *   $target   -> The destination of the message
+     *   $params   -> The rest of the IRC message
+     *
+     * The value of some of this params may be null depending on the response
+     *
+     * @param string $response The message returned sent from the server
+     *
+     * @return array The parsed response
+     */
     function parseResponse($response)
     {
         /*
@@ -299,21 +333,23 @@ class Net_IRC
                 $origin   = $prefix;
                 $orighost = null;
             }
+
             list($command, $rest) = explode(' ', $message[1], 2);
-            // foo :bar
+
             if (strpos($rest, ' :') !== false) {
+                // foo :bar
                 list($target, $params) = explode(' :', $rest, 2);
-            // :bar
             } elseif ($rest{0} == ':') {
+                // :bar
                 $target = substr($rest, 1);
                 $params = null;
-            // foo
             } else {
+                // foo
                 $target = $rest;
                 $params = null;
             }
-        // Server messages (PING, NOTICE, ERROR)
         } else {
+            // Server messages (PING, NOTICE, ERROR)
             $origin   = null;
             $orighost = null;
             $command  = $message[0];
@@ -328,13 +364,15 @@ class Net_IRC
     }
 
     /**
-    * Calls the function that handles the given command (in the form:
-    * "event_$command"). If the function is not present, will call
-    * the "fallback" function, which has always to be present.
-    *
-    * @param string $command One word with the function to call
-    * @param array  $params  The params for the event handler
-    */
+     * Calls the function that handles the given command (in the form:
+     * "event_$command"). If the function is not present, will call
+     * the "fallback" function, which has always to be present.
+     *
+     * @param string $command One word with the function to call
+     * @param array  $params  The params for the event handler
+     *
+     * @return mixed[]
+     */
     function callback($command, $params = array())
     {
         $method = "event_$command";
@@ -349,37 +387,45 @@ class Net_IRC
     }
 
     /**
-    * Updates the internal stats
-    *
-    * @param string type 'rx' or 'tx'
-    * @access private
-    */
-    // XXX rename to _updateStats()
+     * Updates the internal stats
+     *
+     * @param string $type 'rx' or 'tx'
+     *
+     * @todo   rename to _updateStats()
+     * @access private
+     * @return void
+     */
     function updateStats($type = 'rx')
     {
         $this->stats[$type . '_idle_since'] = time();
     }
 
     /**
-    * Updates the stats for a certain event
-    *
-    * @access private
-    */
-    // XXX This should be enhanced to be able to track the different
-    //     kinds of flood attacks (maybe in a different class)
-    // XXX Introduce stats levels (none, normal, full)
+     * Updates the stats for a certain event
+     *
+     * @param string  $event Event
+     * @param mixed[] $args  Arguments
+     *
+     * @todo This should be enhanced to be able to track the different
+     *       kinds of flood attacks (maybe in a different class)
+     * @todo Introduce stats levels (none, normal, full)
+     * @access private
+     * @return void
+     */
     function updateEventStats($event, $args = array())
     {
         $this->log(5, "Updating event $event");
         if (!isset($this->stats['events'][$event])) {
-            $this->stats['events'][$event] = array();
-            $this->stats['events'][$event]['times']    = 1;
-            $this->stats['events'][$event]['interval'] = 1;
-            $this->stats['events'][$event]['last'] = time();
+            $data = array('times' => 1, 'interval' => 1, 'last' => time());
+
+            $this->stats['events'][$event] = $data;
             return;
         }
+
         $event = &$this->stats['events'][$event];
+
         $event['times'] += 1;
+
         // XXX make a configurable param
         $int = 60;
         if ((time() - $event['last']) < $int) {
@@ -387,6 +433,7 @@ class Net_IRC
         } else {
             $event['interval'] = 0;
         }
+
         $this->log(5, "event interval: " . $event['interval']);
         array_pop($args);
         foreach ($args as $k => $v) {
@@ -403,35 +450,40 @@ class Net_IRC
     }
 
     /**
-    * Initialize the stats
-    *
-    * @access private
-    */
-    // XXX Rename to _initStats()
+     * Initialize the stats
+     *
+     * @todo Rename to _initStats()
+     * @access private
+     * @return void
+     */
     function initStats()
     {
         $this->stats['started'] = time();
         $this->stats['rx_idle'] = 0;
-        $this->stats['rx_idle_since'] = time();
         $this->stats['tx_idle'] = 0;
+
+        $this->stats['rx_idle_since'] = time();
         $this->stats['tx_idle_since'] = time();
-        $this->stats['events']  = array();
+
+        $this->stats['events'] = array();
     }
 
     /**
-    * Get the internal stats of the connection. Params accepted for $label:
-    * - rx_idle:      The seconds passed since the last time we received a
-    *                 message from the server
-    * - rx_idle_since: The last date (timestamp) we received a message from the server
-    * - tx_idle       The seconds since the last time we sent a message
-    * - tx_idle_since: The last time we sent a message to the server
-    * - started:      The date (timestamp) when the socket was openned
-    * - running:      The amount of seconds since the start time
-    *
-    * @param mixed $label The string label to return or null for retuning
-    *                     the full stats array
-    * @return mixed Array or int depending on the $label parameter
-    */
+     * Get the internal stats of the connection. Params accepted for $label:
+     * - rx_idle:       The seconds passed since the last time we received a
+     *                  message from the server
+     * - rx_idle_since: The last date (timestamp) we received a message from
+     *                  the server
+     * - tx_idle        The seconds since the last time we sent a message
+     * - tx_idle_since: The last time we sent a message to the server
+     * - started:       The date (timestamp) when the socket was openned
+     * - running:       The amount of seconds since the start time
+     *
+     * @param mixed $label The string label to return or null for retuning
+     *                     the full stats array
+     *
+     * @return mixed Array or int depending on the $label parameter
+     */
     function getStats($label = null)
     {
         $this->stats['rx_idle'] = time() - $this->stats['rx_idle_since'];
@@ -444,10 +496,12 @@ class Net_IRC
     }
 
     /**
-    * Sets which type of messages will be logged
-    *
-    * @param mixed $codes int one code or array multiple codes
-    */
+     * Sets which type of messages will be logged
+     *
+     * @param mixed $codes int one code or array multiple codes
+     *
+     * @return void
+     */
     function logTypes($codes = array())
     {
         settype($codes, 'array');
@@ -455,27 +509,40 @@ class Net_IRC
     }
 
     /**
-    * Gets an option of this instance
-    *
-    * @param  string $options The option to retrieve
-    * @return string The value of the option
-    * @see Net_IRC::options
-    */
+     * Gets an option of this instance
+     *
+     * @param string $option The option to retrieve
+     *
+     * @return string The value of the option
+     * @see Net_IRC::options
+     */
     function getOption($option)
     {
         return isset($this->options[$option]) ? $this->options[$option] : null;
     }
 
     /**
-    * Method to feed the class with external information we want to
-    * access from inside (for avoiding the "global" uglyness)
-    *
-    */
+     * Method to feed the class with external information we want to
+     * access from inside (for avoiding the "global" uglyness)
+     *
+     * @param mixed[] $extra Extra data
+     *
+     * @todo Think about this! It's global in sheep's clothing
+     * @return void
+     */
     function setExtra($extra)
     {
         $this->extra = $extra;
     }
 
+    /**
+     * Get extra external information
+     *
+     * @param string $label Key to find
+     *
+     * @todo Think about this! It's global in sheep's clothing
+     * @return mixed
+     */
     function getExtra($label = null)
     {
         if ($label) {
@@ -485,11 +552,12 @@ class Net_IRC
     }
 
     /**
-    * Checks if a nick is valid or not (RFC 2812 section 2.3.1)
-    *
-    * @param string $nick The nick to check
-    * @return bool The result of the validation
-    */
+     * Checks if a nick is valid or not (RFC 2812 section 2.3.1)
+     *
+     * @param string $nick The nick to check
+     *
+     * @return bool The result of the validation
+     */
     function checkNick($nick)
     {
         $special = preg_quote("[]\'_^{|}");
@@ -502,27 +570,73 @@ class Net_IRC
 }
 
 /**
-* Basic class for handling the callbacks (events). This class should
-* be extended by the user
-*/
+ * Basic class for handling the callbacks (events). This class should
+ * be extended by the user
+ *
+ * @category Net
+ * @package  Net_IRC
+ * @author   Tomas V.V.Cox <cox@idecnet.com>
+ * @license  http://www.php.net/license/2_02.txt PHP 2.02
+ * @link     http://pear.php.net/package/Net_IRC
+ */
 class Net_IRC_Event extends Net_IRC
 {
+    /**
+     * Error handler
+     *
+     * @param string $origin   Origin
+     * @param string $orighost Host
+     * @param string $target   Target
+     * @param string $params   Params
+     *
+     * @return void
+     */
     function event_error($origin, $orighost, $target, $params)
     {
         $this->log(0, "Error ocurred ($origin, $orighost, $target, $params)");
         // XXX add error handling
     }
 
+    /**
+     * Error, nickname in use handler
+     *
+     * @param string $origin   Origin
+     * @param string $orighost Host
+     * @param string $target   Target
+     * @param string $params   Params
+     *
+     * @return void
+     */
     function event_err_nicknameinuse($origin, $orighost, $target, $params)
     {
         die("Could not connect: Nick already in use");
     }
 
+    /**
+     * Ping event handler
+     *
+     * @param string $origin   Origin
+     * @param string $orighost Host
+     * @param string $target   Target
+     * @param string $params   Params
+     *
+     * @return void
+     */
     function event_ping($origin, $orighost, $target, $params)
     {
         $this->command("PONG :$params");
     }
 
+    /**
+     * Fallback
+     *
+     * @param string $origin   Origin
+     * @param string $orighost Host
+     * @param string $target   Target
+     * @param string $params   Params
+     *
+     * @return void
+     */
     function fallback($origin, $orighost, $target, $params)
     {
         $this->buffer[] = array($origin, $target, $params);
@@ -532,17 +646,35 @@ class Net_IRC_Event extends Net_IRC
         }
     }
 
+
+
+
+    /**
+     * Fetch the buffer
+     *
+     * @return mixed[]
+     */
     function &getBuffer()
     {
         $buff = $this->buffer;
+
         $this->buffer = array();
         return $buff;
     }
 
+
+    /**
+     * Log
+     *
+     * @param int    $level   Logging level (0,1,2,3)
+     * @param string $message Logging message
+     *
+     * @return void
+     */
     function log($level, $message)
     {
         if (in_array($level, $this->log_types)) {
-           print date('H:i:s') . " " . trim($message) . "\n"; flush();
+            print date('H:i:s') . " " . trim($message) . "\n"; flush();
         }
     }
 
