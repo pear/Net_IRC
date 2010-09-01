@@ -117,7 +117,7 @@ class Net_IRC
             $this->command("OPER {$options['oper_name']} {$options['oper_pass']}");
         }
 
-        socket_set_blocking($sd, false);
+        stream_set_blocking($sd, 0);
         $this->callback('CONNECT', false);
         $this->options = $options;
 
