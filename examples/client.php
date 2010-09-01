@@ -115,7 +115,7 @@ if ($pid == -1) {
     while (true) {
         $line = readlinel();
         if (trim($line)) {
-            if (!ereg('^[A-Z]', $line)) {
+            if (!preg_match('/^[A-Z]/', $line)) {
                 $irc->command("PRIVMSG #pear :$line");
             } else {
                 $irc->command($line);
