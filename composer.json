@@ -1,0 +1,25 @@
+{
+    "authors": [
+        {
+            "email": "cox@idecnet.com",
+            "name": "Tomas V.V.Cox",
+            "role": "Lead"
+        }
+    ],
+    "autoload": {
+        "classmap": [
+            "./"
+        ]
+    },
+    "description": "More info available on: http://pear.php.net/package/Net_IRC",
+    "license": "PHP License",
+    "name": "pear/net_irc",
+    "support": {
+        "issues": "http:///bugs/search.php?cmd=display&package_name[]=Net_IRC",
+        "source": "https://github.com/pear/Net_IRC"
+    },
+    "type": "library",
+    "require-dev": {
+        "phpunit/phpunit": "*"
+    }
+}
